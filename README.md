@@ -446,6 +446,8 @@ See [docs/SUPPORTED-MODE.md](https://github.com/bata24/gef/blob/dev/docs/SUPPORT
 * `vdso`: disassembles the text area of vdso smartly.
     * ![](https://raw.githubusercontent.com/bata24/gef/dev/images/vdso.png)
 * `vvar`: dumps the area of vvar.
+    * This area is mapped to userland, but cannot be accessed from gdb.
+    * Therefore, it executes the assembly code and retrieve the contents.
     * ![](https://raw.githubusercontent.com/bata24/gef/dev/images/vvar.png)
 * `gdtinfo`: pretty prints GDT entries. If userland, show sample entries.
     * ![](https://raw.githubusercontent.com/bata24/gef/dev/images/gdtinfo.png)
@@ -569,7 +571,7 @@ See [docs/SUPPORTED-MODE.md](https://github.com/bata24/gef/blob/dev/docs/SUPPORT
     * ![](https://raw.githubusercontent.com/bata24/gef/dev/images/search-mangled-ptr.png)
 * `strings`: searches ASCII string from specific location.
     * ![](https://raw.githubusercontent.com/bata24/gef/dev/images/strings.png)
-* `read-system-register`: reads system register for old qemu (ARM32 only).
+* `read-system-register`: reads system register for old qemu (only ARM32).
     * ![](https://raw.githubusercontent.com/bata24/gef/dev/images/read-system-register.png)
 * `v8`: displays v8 tagged object.
     * ![](https://raw.githubusercontent.com/bata24/gef/dev/images/v8.png)
