@@ -607,6 +607,10 @@ See [docs/SUPPORTED-MODE.md](https://github.com/bata24/gef/blob/dev/docs/SUPPORT
 * `xs`: dumps string like `x/s` command, but with hex-string style.
     * ![](https://raw.githubusercontent.com/bata24/gef/dev/images/xs.png)
 * `syscall-sample`: shows the syscall calling sample for specified architecture.
+* `iouring-dump`: dumps the area of iouring (only x64).
+    * This area is mapped to userland, but cannot be accessed from gdb.
+    * Therefore, it executes the assembly code and retrieve the contents.
+    * ![](https://raw.githubusercontent.com/bata24/gef/dev/images/iouring-dump.png)
 
 ### Other
 * The category is introduced in `gef help`.

@@ -1,6 +1,6 @@
 // https://github.com/shuveb/io_uring-by-example
 // gcc test.c -luring
-//
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,6 +8,7 @@
 #include <sys/ioctl.h>
 #include <liburing.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define QUEUE_DEPTH 1
 #define BLOCK_SZ    1024
@@ -156,6 +157,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Call the clean-up function. */
+    __asm__("int3");
     io_uring_queue_exit(&ring);
     return 0;
 }

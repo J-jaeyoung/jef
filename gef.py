@@ -14423,6 +14423,113 @@ class VvarCommand(GenericCommand):
 
 
 @register_command
+class IouringDumpCommand(GenericCommand):
+    """Dump the area of iouring (only x64)."""
+    _cmdline_ = "iouring-dump"
+    _category_ = "02-e. Process Information - Complex Structure Information"
+
+    parser = argparse.ArgumentParser(prog=_cmdline_)
+    parser.add_argument("-n", "--no-pager", action="store_true", help="do not use less.")
+    _syntax_ = parser.format_help()
+
+    def read128(self, addr):
+        codes = [
+            b"\x48\x8b\x00", # mov rax, qword ptr [rax]
+            b"\x48\x8b\x09", # mov rcx, qword ptr [rcx]
+            b"\x48\x8b\x12", # mov rdx, qword ptr [rdx]
+            b"\x48\x8b\x1b", # mov rbx, qword ptr [rbx]
+            b"\x48\x8b\x24\x24", # mov rsp, qword ptr [rsp]
+            b"\x48\x8b\x6d\x00", # mov rbp, qword ptr [rbp]
+            b"\x48\x8b\x36", # mov rsi, qword ptr [rsi]
+            b"\x48\x8b\x3f", # mov rdi, qword ptr [rdi]
+            b"\x4d\x8b\x00", # mov r8, qword ptr [r8]
+            b"\x4d\x8b\x09", # mov r9, qword ptr [r9]
+            b"\x4d\x8b\x12", # mov r10, qword ptr [r10]
+            b"\x4d\x8b\x1b", # mov r11, qword ptr [r11]
+            b"\x4d\x8b\x24\x24", # mov r12, qword ptr [r12]
+            b"\x4d\x8b\x6d\x00", # mov r13, qword ptr [r13]
+            b"\x4d\x8b\x36", # mov r14, qword ptr [r14]
+            b"\x4d\x8b\x3f", # mov r15, qword ptr [r15]
+        ]
+        regs = [
+            "$rax", "$rcx", "$rdx", "$rbx", "$rsp", "$rbp", "$rsi", "$rdi",
+            "$r8", "$r9", "$r10", "$r11", "$r12", "$r13", "$r14", "$r15",
+        ]
+        regs = {reg: addr + i * current_arch.ptrsize for i, reg in enumerate(regs)}
+        ret = ExecAsm(codes, regs=regs, step=len(codes)).exec_code()
+        values = [ret["reg"][reg] for reg in regs]
+        return b"".join([p64(v) for v in values])
+
+    def read(self, addr, size):
+        out = b""
+        pos = 0
+        while pos < size:
+            if size - pos >= 128:
+                out += self.read128(addr + pos)
+                pos += 128
+        return out
+
+    def merge_lines(self, lines_unmerged):
+        lines = []
+        keep_asterisk = False
+        for i, line in enumerate(lines_unmerged):
+            if lines == [] or i < 0x10:
+                lines.append(line)
+                continue
+            if "    " not in lines[-1] or "    " not in line:
+                lines.append(line)
+                continue
+            if re.split("    +", lines[-1])[1] == re.split("    +", line)[1]:
+                if not keep_asterisk:
+                    keep_asterisk = True
+            else:
+                if keep_asterisk:
+                    lines.append("*")
+                    keep_asterisk = False
+                lines.append(line)
+        if keep_asterisk:
+            lines.append("*")
+        return lines
+
+    @parse_args
+    @only_if_gdb_running
+    @exclude_specific_gdb_mode(mode=("qemu-system", "kgdb", "vmware", "rr"))
+    @only_if_specific_arch(arch=("x86_64",))
+    def do_invoke(self, args):
+        self.dont_repeat()
+
+        # get map entry
+        maps = get_process_maps()
+        if maps is None:
+            err("Failed to get maps")
+            return
+
+        # get anon_inode:[io_uring]
+        iouring_entries = []
+        for entry in maps:
+            if entry.path == "anon_inode:[io_uring]":
+                iouring_entries.append(entry)
+
+        # dump
+        self.out = []
+        for entry in iouring_entries:
+            if entry.offset in [0, 0x8000000]: # IORING_OFF_SQ_RING ,IORING_OFF_CQ_RING
+                self.out.append(titlify("struct io_rings: {:#x}".format(entry.page_start)))
+            elif entry.offset == 0x10000000: # IORING_OFF_SQES
+                self.out.append(titlify("struct io_uring_sqe: {:#x}".format(entry.page_start)))
+
+            data = self.read(entry.page_start, entry.size)
+            hex_data = hexdump(data, base=entry.page_start, unit=8)
+            hex_data_merged = self.merge_lines(hex_data.splitlines())
+            self.out.extend(hex_data_merged)
+
+        # print
+        if self.out:
+            gef_print("\n".join(self.out).rstrip(), less=not args.no_pager)
+        return
+
+
+@register_command
 class PidCommand(GenericCommand):
     """Display the local PID or remote PID."""
     _cmdline_ = "pid"
