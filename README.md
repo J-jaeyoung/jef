@@ -40,7 +40,7 @@ Many other commands have been added and improved. Enjoy!
 wget -q https://raw.githubusercontent.com/bata24/gef/dev/install.sh -O- | sh
 ```
 
-GEF is installed under `/root` to simplify the installation script.
+GEF (`.gdbinit-gef.py`) is installed under `/root` to simplify the installation script.
 If you want to change the location, please modify accordingly.
 
 ### Install (Ubuntu 23.04 or after)

@@ -23,6 +23,9 @@ If you have any trouble, please report it on the issue page.
 This is probably because gdb does not support cooperation with python3.
 Consider building gdb from source with `./configure --enable-targets=all --with-python=/usr/bin/python3 && make && make install`.
 
+## Where is `gef.py`?
+GEF (`gef.py`) is placed in `/root/.gdbinit-gef.py` by default. GEF is one file.
+
 ## What is `~/.gef.rc`?
 This is the GEF config file. Not present by default.
 
@@ -87,26 +90,37 @@ the virtual address of the process you wanted isn't mapped.
 For this reason, software breakpoints that embed `0xcc` in virtual memory cannot be used in some situations.
 However, hardware breakpoints can be used without any problems.
 
+## Does GEF work with the latest version of gdb?
+Yes, it probably works.
+
+The example of build commands are shown below.
+```
+git clone --depth 1 https://github.com/bminor/binutils-gdb && cd binutils-gdb
+./configure --disable-binutils --disable-ld --disable-gold --disable-gas --disable-sim --disable-gprof --disable-gprofng \
+--enable-targets=all --with-python=/usr/bin/python3 --with-system-zlib --with-system-readline
+make && make install
+```
+
 
 # About commands
 
 ## How does GEF implement kernel analysis related commands without symbols?
 Internally, it consists of several steps.
 
-1. Identify the memory map from the page table structure.
-2. Identify `.rodata` area of kernel from memory map.
+1. Enumerate memory map informations from the page table structure.
+2. Detect `.rodata` area of kernel from memory map informations.
 3. Scan `.rodata` to identify the kernel version.
 4. Parse the structure of `kallsyms` in `.rodata` and get all "symbol and address" pairs.
 5. If global variable symbols are available at this point, use it. (= `CONFIG_KALLSYMS_ALL=y`).
-    * If not, disassemble the function which uses specified global variable.
-    * By parsing the result, we obtain the address of the required global variable.
+    * If not, GEF disassembles the function which uses specified global variable.
+    * By parsing the result, GEF obtains the address of the required global variable.
     * This is implemented at `KernelAddressHeuristicFinder` class and `KernelAddressHeuristicFinderUtil` class.
-6. Determine the offsets of the structure's members, if necessary.
-    * Use facts such as whether a value in memory is an address or whether a structure in memory has a specific structure to identify it heuristically.
-    * At this time, I take into account the presence or absence of members and changes in their order due to differences in kernel versions.
-7. Parse and display the value in memory using all the information determined so far.
+6. Detect the offset of the member of the structure, if necessary.
+    * To identify it heuristically, GEF use facts such as whether a value in memory is an address or whether a structure in memory has a specific structure.
+    * At this time, GEF take into account the presence or absence of members and changes in their order due to differences in kernel versions.
+7. Parse and display the value in memory using all the information detected so far.
 
-As you can see, it doesn't work well if the structures are arranged randomly (`CONFIG_RANDSTRUCT=y`).
+As you can see, it doesn't work well if structure members are arranged randomly (`CONFIG_RANDSTRUCT=y`).
 Also, depending on the assembly output by the compiler, it may not be possible to parse it correctly.
 
 ## What command should I start with when debugging the kernel?
